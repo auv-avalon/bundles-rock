@@ -47,6 +47,19 @@ module Simulation
             #orocos_task.enable_gui = true
             super
         end
+
+        def set_node_position(name, posX, posY, posZ, rotX, rotY, rotZ)
+            opt = Types::Simulation::Positions.new
+            opt.nodename = name
+            opt.posx = posX
+            opt.posy = posY
+            opt.posz = posZ
+            opt.posz = posZ
+            opt.rotx = rotX
+            opt.roty = rotY
+            opt.rotz = rotZ
+            orocos_task.move_node(opt)
+        end
     end
 
     class Actuators
@@ -266,6 +279,25 @@ module Simulation
             end
         end
         raise ArgumentError, "no composition found to represent devices of type #{device_model} in MARS"
+    end
+
+    class MarsNodePositionSetter < Syskit::Composition
+        argument :node
+        argument :posX
+        argument :posY
+        argument :posZ
+        argument :rotX, :default => 0
+        argument :rotY, :default => 0
+        argument :rotZ, :default => 0
+
+        add Mars, :as => "mars"
+
+
+        on :start do |e|
+            mars_child.set_node_position(node,posX,posY,posZ,rotX,rotY,rotZ)
+            emit :success
+            e
+        end
     end
 end
 
