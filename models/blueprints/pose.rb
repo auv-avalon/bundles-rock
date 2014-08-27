@@ -80,6 +80,11 @@ module Base
     data_service_type 'VelocitySrv' do
         output_port 'velocity_samples', '/base/samples/RigidBodyState'
     end
+
+    # Provider of a full velocity
+    data_service_type 'DVLSrv' do
+        output_port 'dvl_samples', '/base/samples/RigidBodyState'
+    end
     
     # Provider of distance-to-ground
     #

@@ -7,6 +7,7 @@ module Dev
             device_type 'Explorer' do
                 provides Base::GroundDistanceSrv
                 provides Base::VelocitySrv
+                provides Base::DVLSrv
             end
         end
     end
