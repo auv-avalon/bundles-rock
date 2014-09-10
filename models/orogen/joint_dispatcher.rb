@@ -67,7 +67,7 @@ module JointDispatcher
 
             status_mappings.each do |input, _, srv|
                 child = add Base::JointsStatusSrv, :as => input
-                child.connect_to dispatcher_child.find_data_service(srv.name), :type => :buffer, :size => 100
+                child.connect_to dispatcher_child.find_data_service(srv.name)
             end
 
             status_mappings.map { |_, output, _| output }.to_set.each do |output|
@@ -82,7 +82,7 @@ module JointDispatcher
 
             command_mappings.each do |_, output, srv|
                 child = add Base::JointsCommandConsumerSrv, :as => output
-                dispatcher_child.find_data_service(srv.name).connect_to child, :type => :buffer, :size => 100
+                dispatcher_child.find_data_service(srv.name).connect_to child
             end
 
             #Export controlled system types.
@@ -134,7 +134,7 @@ module JointDispatcher
             # input port
             dispatches.each do |input, _, srv|
                 child = add Base::JointsStatusSrv, :as => input
-                child.connect_to dispatcher_child.find_data_service(srv.name), :type => :buffer, :size => 100
+                child.connect_to dispatcher_child.find_data_service(srv.name)
             end
 
             # Export each output port and define it as a provider for Base::JointsStatusSrv

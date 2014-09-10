@@ -16,6 +16,6 @@ end
 
 
 class DvlTeledyne::Task
-    driver_for Dev::Sensors::Teledyne::Explorer, :as => 'driver', "distance" => "ground_distance", "velocity_samples" => "velocity_samples"
+    driver_for Dev::Sensors::Teledyne::Explorer, :as => 'driver', "distance" => "ground_distance", "velocity_samples" => "velocity_samples", "dvl_samples" => "velocity_samples" 
 end
 
