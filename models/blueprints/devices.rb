@@ -1,4 +1,4 @@
-require 'models/blueprints/sensors'
+require 'rock/models/blueprints/sensors'
 require 'models/blueprints/timestamping'
 
 # The module under which all device models are defined

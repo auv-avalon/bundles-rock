@@ -2,7 +2,7 @@ require 'rock/models/blueprints/control'
 require 'rock/models/blueprints/pose'
 require 'rock/models/blueprints/devices'
 
-using_task_library 'simulation'
+using_task_library 'mars'
 
 module Dev::Simulation
     module Mars
@@ -22,13 +22,14 @@ module Dev::Simulation
         device_type "Sonar"
         device_type "AuvController"
         device_type "ForceTorque6DOF"
+        device_type "Altimeter"
     end
 end
 
 module Mars
     DevMars = Dev::Simulation::Mars
     class SimulatedDevice < Syskit::Composition
-        add Simulation::Mars, :as => "mars"
+        add Mars::Task, :as => "mars"
 
         def self.instanciate(*args)
             cmp_task = super
@@ -52,18 +53,30 @@ module Mars
 
         driver_for DevMars::AuvMotion, :as => "driver"
         class Cmp < SimulatedDevice
-            add Simulation::AuvMotion, :as => "task"
+            add Mars::AuvMotion, :as => "task"
             export task_child.command_port
             export task_child.status_port
             provides Base::JointsControlledSystemSrv, :as => 'actuator'
         end
     end
+    
+    class Altimeter
+        forward :lost_mars_connection => :failed
+        driver_for DevMars::Altimeter, :as => "driver"
+        provides Base::GroundDistanceSrv, :as => 'dist'
+        class Cmp < SimulatedDevice
+            add Mars::Altimeter, :as => "task"
+            export task_child.ground_distance_port
+            provides Base::GroundDistanceSrv, :as => 'dist'
+        end
+    end
+
 
     class AuvController
         forward :lost_mars_connection => :failed
         driver_for DevMars::AuvController, :as => "driver"
         class Cmp < SimulatedDevice
-            add Simulation::AuvController, :as => "task"
+            add Mars::AuvController, :as => "task"
         end
     end
 
@@ -131,45 +144,45 @@ module Mars
       end
     end
 
-    class HighResRangeFinder
-        argument :cameras
-
-        forward :lost_mars_connection => :failed
-        driver_for DevMars::HighResRangeFinder, :as => "driver"
-        provides Base::PointcloudProviderSrv, :as => "pointcloud_provider"
-        transformer do
-            associate_frame_to_ports 'high_res_range_finder', 'pointcloud'
-        end
-
-        # Camera can be added to increase the viewing angle, but needs to be added after start of
-        # the device
-        def self.with_cameras(name, *viewing_angles)
-            if viewing_angles.empty?
-                viewing_angles = [90,180,270]
-            end
-            cameras = Hash.new
-            viewing_angles.each {|v| cameras["#{name}#{v}"] = v }
-            to_instance_requirements.
-                with_arguments('cameras' => cameras)
-        end
-
-        class Cmp < SimulatedDevice
-            add HighResRangeFinder, :as => "task"
-            export task_child.pointcloud_port
-            provides Base::PointcloudProviderSrv, :as => 'pointcloud_provider'
-        end
-
-        on :start do |event|
-            cameras = arguments[:cameras]
-            if cameras
-                cameras.each do |name, angle|
-                    puts "#{__FILE__}: Simulation::MarsHighResRangeFinder adding camera '#{name}' for angle '#{angle}'"
-                    orocos_task.addCamera(name, angle)
-                end
-            end
-        end
-    end
-
+#    class HighResRangeFinder
+#        argument :cameras
+#
+#        forward :lost_mars_connection => :failed
+#        driver_for DevMars::HighResRangeFinder, :as => "driver"
+#        provides Base::PointcloudProviderSrv, :as => "pointcloud_provider"
+#        transformer do
+#            associate_frame_to_ports 'high_res_range_finder', 'pointcloud'
+#        end
+#
+#        # Camera can be added to increase the viewing angle, but needs to be added after start of
+#        # the device
+#        def self.with_cameras(name, *viewing_angles)
+#            if viewing_angles.empty?
+#                viewing_angles = [90,180,270]
+#            end
+#            cameras = Hash.new
+#            viewing_angles.each {|v| cameras["#{name}#{v}"] = v }
+#            to_instance_requirements.
+#                with_arguments('cameras' => cameras)
+#        end
+#
+#        class Cmp < SimulatedDevice
+#            add HighResRangeFinder, :as => "task"
+#            export task_child.pointcloud_port
+#            provides Base::PointcloudProviderSrv, :as => 'pointcloud_provider'
+#        end
+#
+#        on :start do |event|
+#            cameras = arguments[:cameras]
+#            if cameras
+#                cameras.each do |name, angle|
+#                    puts "#{__FILE__}: Mars::HighResRangeFinder adding camera '#{name}' for angle '#{angle}'"
+#                    orocos_task.addCamera(name, angle)
+#                end
+#            end
+#        end
+#    end
+#
     class RotatingLaserRangeFinder
       forward :lost_mars_connection => :failed
       driver_for DevMars::RotatingRangeFinder, :as => "driver"
@@ -179,6 +192,23 @@ module Mars
           export task_child.pointcloud_port
           provides Base::PointcloudProviderSrv, :as => 'pointcloud_provider'
       end
+    end
+    
+    class NodePositionSetter < Syskit::Composition
+        argument :node, :type => :String
+        argument :posX, :type => :double 
+        argument :posY, :type => :double
+        argument :posZ, :type => :double
+        argument :rotX, :default => 0, :type => :double
+        argument :rotY, :default => 0, :type => :double
+        argument :rotZ, :default => 0, :type => :double
+        add Task, :as => "mars"
+        
+        on :start do |e|
+            mars_child.set_node_position(node,posX,posY,posZ,rotX,rotY,rotZ)
+            emit :success
+            e
+        end
     end
 
     def self.define_simulated_device(profile, name, model)
